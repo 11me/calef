@@ -1,0 +1,11 @@
+services:
+  nats:
+    image: docker.io/nats:2.10.26
+    command:
+      - "--debug"
+      - "--http_port=8222"
+      - "--js"
+    ports:
+      - 127.0.0.1:8222:8222
+      - 127.0.0.1:4222:4222
+
