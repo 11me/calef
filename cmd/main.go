@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/11me/calef/config"
 	"github.com/11me/calef/consumers"
@@ -31,7 +32,12 @@ func main() {
 	consumer := consumers.NewBinanceConsumer(ctx, nc)
 	consumer.SubscribeTicks("btcusdt", "ethusdt")
 
+	barAggr := consumers.NewBarAggregator(ctx, nc)
+	barAggr.AddSymbols("btcusdt", "ethusdt")
+	barAggr.AddTimeframes(time.Second, time.Minute, 5*time.Minute, 15*time.Minute)
+
 	go consumer.Start()
+	go barAggr.Start()
 
 	<-ctx.Done()
 }

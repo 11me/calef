@@ -15,13 +15,13 @@ type BinanceAggTrade struct {
 	EventTimeMs int64  `json:"E"`
 }
 
-type Candle struct {
-	High  float64 `json:"h"`
-	Low   float64 `json:"l"`
-	Open  float64 `json:"o"`
-	Close float64 `json:"c"`
+type Bar struct {
+	High  float64 `json:"high"`
+	Low   float64 `json:"low"`
+	Open  float64 `json:"open"`
+	Close float64 `json:"close"`
 
-	Volume    float64   `json:"v"`
+	Volume    float64   `json:"volume"`
 	IsClosed  bool      `json:"isClosed"`
 	StartTime time.Time `json:"startTime"`
 }
