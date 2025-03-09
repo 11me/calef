@@ -7,6 +7,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.39.1
+	github.com/valyala/fastjson v1.6.4
 )
 
 require (

@@ -29,8 +29,7 @@ func main() {
 	}
 
 	consumer := consumers.NewBinanceConsumer(ctx, nc)
-	consumer.SubscribeTicks("btcusdt")
-	consumer.SubscribeTicks("ethusdt")
+	consumer.SubscribeTicks("btcusdt", "ethusdt")
 
 	go consumer.Start()
 
