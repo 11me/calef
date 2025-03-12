@@ -1,15 +1,14 @@
-package consumers
+package exchange
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 	"math/rand"
-	"strings"
 	"time"
 
+	"github.com/11me/calef/common"
 	"github.com/11me/calef/config"
-	"github.com/11me/calef/models"
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
 	"github.com/valyala/fastjson"
@@ -165,7 +164,7 @@ func (c *BinanceConsumer) readTicks() {
 		}
 
 		symbol := val.Get("s")
-		subj := models.BinanceTicksSubject + "." + strings.ToLower(string(symbol.GetStringBytes()))
+		subj := common.BinanceTicksSubj(string(symbol.GetStringBytes()))
 
 		err = c.nc.Publish(subj, msg)
 		if err != nil {

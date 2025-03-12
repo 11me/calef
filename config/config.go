@@ -8,11 +8,16 @@ import (
 )
 
 type Config struct {
-	Nats `envPrefix:"NATS_"`
+	Nats   `envPrefix:"NATS_"`
+	Server `envPrefix:"SERVER_"`
 }
 
 type Nats struct {
 	URL string `env:"URL,notEmpty"`
+}
+
+type Server struct {
+	Addr string `env:"ADDR" envDefault:":8080"`
 }
 
 func New() (*Config, error) {

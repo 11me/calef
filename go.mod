@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
+	github.com/expr-lang/expr v1.16.9
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.39.1

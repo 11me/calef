@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/11me/calef/config"
-	"github.com/11me/calef/consumers"
+	"github.com/11me/calef/consumers/aggregators"
+	"github.com/11me/calef/consumers/exchange"
+	"github.com/11me/calef/consumers/monitors"
+	"github.com/11me/calef/models"
 	"github.com/nats-io/nats.go"
 )
 
@@ -29,15 +31,21 @@ func main() {
 		log.Fatal(err)
 	}
 
-	consumer := consumers.NewBinanceConsumer(ctx, nc)
-	consumer.SubscribeTicks("btcusdt", "ethusdt")
+	binanceConsumer := exchange.NewBinanceConsumer(ctx, nc)
+	binanceConsumer.SubscribeTicks("btcusdt", "ethusdt")
 
-	barAggr := consumers.NewBarAggregator(ctx, nc)
-	barAggr.AddSymbols("btcusdt", "ethusdt")
-	barAggr.AddTimeframes(time.Second, time.Minute, 5*time.Minute, 15*time.Minute)
+	btcAgg := aggregators.NewBarAggregator(ctx, nc, "btcusdt", models.M1)
+	ethAgg := aggregators.NewBarAggregator(ctx, nc, "ethusdt", models.M1)
 
-	go consumer.Start()
-	go barAggr.Start()
+	ethBtcPortfolio, err := monitors.NewPortfolioMonitor(ctx, nc, []string{"btcusdt", "ethusdt"}, models.M1, "ethusdt/btcusdt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go binanceConsumer.Start()
+	go btcAgg.Start()
+	go ethAgg.Start()
+	go ethBtcPortfolio.Start()
 
 	<-ctx.Done()
 }

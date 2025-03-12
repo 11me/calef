@@ -1,11 +1,8 @@
 package models
 
 import (
+	"fmt"
 	"time"
-)
-
-const (
-	BinanceTicksSubject = "binancef.ticks"
 )
 
 type BinanceAggTrade struct {
@@ -16,38 +13,58 @@ type BinanceAggTrade struct {
 }
 
 type Bar struct {
-	High  float64 `json:"high"`
-	Low   float64 `json:"low"`
-	Open  float64 `json:"open"`
-	Close float64 `json:"close"`
+	Symbol string  `json:"symbol"`
+	High   float64 `json:"high"`
+	Low    float64 `json:"low"`
+	Open   float64 `json:"open"`
+	Close  float64 `json:"close"`
 
 	Volume    float64   `json:"volume"`
 	IsClosed  bool      `json:"isClosed"`
 	StartTime time.Time `json:"startTime"`
 }
 
-// Websockets.
-
-type WsCommand struct {
-	Method string   `json:"method"`
-	Params []string `json:"params"`
-}
-
-type Method string
+type Timeframe time.Duration
 
 const (
-	SubscribeBars     Method = "subscribeBars"
-	SubscribeSynthBar Method = "subscribeSynthBar"
+	M1  Timeframe = Timeframe(time.Minute)
+	M5  Timeframe = Timeframe(5 * time.Minute)
+	M10 Timeframe = Timeframe(10 * time.Minute)
+	M15 Timeframe = Timeframe(15 * time.Minute)
 )
 
-func (m Method) IsValid() bool {
-	switch m {
-	case
-		SubscribeBars,
-		SubscribeSynthBar:
+func (tf Timeframe) String() string {
+	d := time.Duration(tf)
 
-		return true
+	// Weeks
+	if d >= 7*24*time.Hour {
+		weeks := d / (7 * 24 * time.Hour)
+		return fmt.Sprintf("%dw", weeks)
 	}
 
-	return false
+	// Days
+	if d >= 24*time.Hour {
+		days := d / (24 * time.Hour)
+		return fmt.Sprintf("%dd", days)
+	}
+
+	// Hours
+	if d >= time.Hour {
+		hours := d / time.Hour
+		return fmt.Sprintf("%dh", hours)
+	}
+
+	// Minutes
+	if d >= time.Minute {
+		minutes := d / time.Minute
+		return fmt.Sprintf("%dm", minutes)
+	}
+
+	// Seconds
+	if d >= time.Second {
+		seconds := d / time.Second
+		return fmt.Sprintf("%ds", seconds)
+	}
+
+	return d.String()
 }
