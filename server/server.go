@@ -13,9 +13,10 @@ type Server struct {
 }
 
 func NewServer(addr string) *Server {
+	mux := http.NewServeMux()
 	return &Server{
-		srv: &http.Server{Addr: addr},
-		mux: http.NewServeMux(),
+		srv: &http.Server{Addr: addr, Handler: mux},
+		mux: mux,
 		log: slog.With("service", "server"),
 	}
 }

@@ -19,9 +19,7 @@ type PortfolioMonitor struct {
 	ctx             context.Context
 	nc              *nats.Conn
 	log             *slog.Logger
-	symbols         []string
-	tf              models.Timeframe
-	formula         string
+	portfolio       *models.Portfolio
 	compiledProgram *vm.Program
 	consumer        *consumers.Consumer
 
@@ -30,19 +28,17 @@ type PortfolioMonitor struct {
 	currentBars map[string]*models.Bar
 }
 
-func NewPortfolioMonitor(ctx context.Context, nc *nats.Conn, symbols []string, tf models.Timeframe, formula string) (*PortfolioMonitor, error) {
-	program, err := expr.Compile(formula, expr.AllowUndefinedVariables())
+func NewPortfolioMonitor(ctx context.Context, nc *nats.Conn, portfilo *models.Portfolio) (*PortfolioMonitor, error) {
+	program, err := expr.Compile(portfilo.Formula, expr.AllowUndefinedVariables())
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile formula %q: %w", formula, err)
+		return nil, fmt.Errorf("failed to compile formula %q: %w", portfilo.Formula, err)
 	}
 
 	pm := &PortfolioMonitor{
 		ctx:             ctx,
 		nc:              nc,
-		log:             slog.With("service", "PortfolioMonitor", "timeframe", tf.String()),
-		symbols:         symbols,
-		tf:              tf,
-		formula:         formula,
+		log:             slog.With("service", "PortfolioMonitor", "timeframe", portfilo.Timeframe.String()),
+		portfolio:       portfilo,
 		compiledProgram: program,
 		currentBars:     make(map[string]*models.Bar),
 		consumer:        consumers.NewConsumer(ctx, nc),
@@ -52,15 +48,19 @@ func NewPortfolioMonitor(ctx context.Context, nc *nats.Conn, symbols []string, t
 		SetLogger(pm.log).
 		SetConcurrency(1)
 
-	for _, symbol := range symbols {
-		pm.consumer.Subscribe(c.BinanceBarsSubj(symbol, tf), pm)
+	for _, symbol := range pm.portfolio.Symbols {
+		pm.consumer.Subscribe(c.BinanceBarsSubj(symbol, pm.portfolio.Timeframe), pm)
 	}
 
 	return pm, nil
 }
 
-func (pm *PortfolioMonitor) Start() error {
+func (pm *PortfolioMonitor) Spawn() error {
 	return pm.consumer.Start()
+}
+
+func (pm *PortfolioMonitor) Stop() error {
+	return pm.consumer.Stop()
 }
 
 func (pm *PortfolioMonitor) Handle(msg *nats.Msg) error {
@@ -92,8 +92,8 @@ func (pm *PortfolioMonitor) Handle(msg *nats.Msg) error {
 	}
 
 	// Only calculate the synthetic bar if bars for all symbols are available.
-	if len(pm.currentBars) < len(pm.symbols) {
-		pm.log.Debug("not all symbols have current bars", "current", len(pm.currentBars), "expected", len(pm.symbols))
+	if len(pm.currentBars) < len(pm.portfolio.Symbols) {
+		pm.log.Debug("not all symbols have current bars", "current", len(pm.currentBars), "expected", len(pm.portfolio.Symbols))
 
 		return nil
 	}
@@ -104,7 +104,7 @@ func (pm *PortfolioMonitor) Handle(msg *nats.Msg) error {
 	closeParams := make(map[string]float64)
 	volumeSum := float64(0)
 
-	for _, sym := range pm.symbols {
+	for _, sym := range pm.portfolio.Symbols {
 		b, ok := pm.currentBars[strings.ToLower(sym)]
 		if !ok {
 			continue
@@ -142,6 +142,7 @@ func (pm *PortfolioMonitor) Handle(msg *nats.Msg) error {
 	}
 
 	syntheticBar := models.Bar{
+		Symbol:    pm.portfolio.Formula + ".synth",
 		Open:      syntheticOpen,
 		High:      syntheticHigh,
 		Low:       syntheticLow,
@@ -152,7 +153,7 @@ func (pm *PortfolioMonitor) Handle(msg *nats.Msg) error {
 	}
 
 	// TODO: Handle the bar somehow. Trigger notification or smth.
-	subjSynthetic := fmt.Sprintf("synthetic.bars.%s", pm.tf.String())
+	subjSynthetic := fmt.Sprintf("synthetic.bars.%s", pm.portfolio.Timeframe.String())
 	if err := pm.publishBar(subjSynthetic, &syntheticBar); err != nil {
 		pm.log.Error("failed to publish synthetic bar", "subject", subjSynthetic, "err", err)
 		return err

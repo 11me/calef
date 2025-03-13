@@ -43,8 +43,12 @@ func NewBarAggregator(ctx context.Context, nc *nats.Conn, symbol string, tf mode
 	return agg
 }
 
-func (ba *BarAggregator) Start() error {
+func (ba *BarAggregator) Spawn() error {
 	return ba.consumer.Start()
+}
+
+func (ba *BarAggregator) Stop() error {
+	return ba.consumer.Stop()
 }
 
 func (ba *BarAggregator) Handle(msg *nats.Msg) error {

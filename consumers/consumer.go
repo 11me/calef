@@ -2,6 +2,7 @@ package consumers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -26,9 +27,9 @@ type Consumer struct {
 	ctx          context.Context
 	nc           *nats.Conn
 	handlers     map[string]*handlerEntry
-	waitHandlers sync.WaitGroup
 	log          *slog.Logger
 	subs         []*nats.Subscription
+	waitHandlers sync.WaitGroup
 	sem          chan struct{}
 	done         chan struct{}
 }
@@ -96,18 +97,28 @@ func (c *Consumer) Start() error {
 		c.subs = append(c.subs, sub)
 	}
 
-	// Wait for cancellation.
-	<-c.ctx.Done()
-	close(c.done)
+	return nil
+}
+
+func (c *Consumer) Stop() error {
+	select {
+	case <-c.done:
+		// already closed
+	default:
+		close(c.done)
+	}
+
 	c.waitHandlers.Wait()
 
 	var drainErr error
 	for _, sub := range c.subs {
 		if err := sub.Drain(); err != nil {
 			c.log.Error("failed to drain subscription", "err", err)
-			drainErr = err
+			drainErr = errors.Join(drainErr, err)
 		}
 	}
+
+	c.log.Debug("stopped")
 
 	return drainErr
 }

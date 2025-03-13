@@ -17,7 +17,7 @@ type Nats struct {
 }
 
 type Server struct {
-	Addr string `env:"ADDR" envDefault:":8080"`
+	Addr string `env:"ADDR" envDefault:":3435"`
 }
 
 func New() (*Config, error) {
